@@ -1,7 +1,14 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
-import { Descendant, Editor, Transforms, createEditor, Element } from "slate";
+import { JSX, useCallback, useMemo, useState } from "react";
+import {
+  Descendant,
+  Editor,
+  Transforms,
+  createEditor,
+  Element,
+  Node,
+} from "slate";
 import { Editable, Slate, withReact } from "slate-react";
 // This example is for an Editor with `ReactEditor` and `HistoryEditor`
 import { BaseEditor } from "slate";
@@ -10,9 +17,11 @@ import { HistoryEditor } from "slate-history";
 
 type ParagraphElement = { type: "paragraph"; children: CustomText[] };
 type CodeElement = { type: "code"; children: CustomText[] };
-
 type CustomElement = ParagraphElement | CodeElement;
+
 type CustomText = { text: string; bold?: true };
+
+type CustomNode = Node & (CustomElement | CustomText);
 
 declare module "slate" {
   interface CustomTypes {
@@ -23,7 +32,7 @@ declare module "slate" {
 }
 
 // Define a React component renderer for our code blocks.
-const CodeElement = (props) => {
+const CodeElement = (props: { attributes: any; children: any[] }) => {
   return (
     <pre {...props.attributes}>
       <code>Code: {props.children}</code>
@@ -31,11 +40,15 @@ const CodeElement = (props) => {
   );
 };
 
-const DefaultElement = (props) => {
+const DefaultElement = (props: { attributes: any; children: any[] }) => {
   return <p {...props.attributes}>Default: {props.children}</p>;
 };
 
-const Leaf = (props) => {
+const Leaf = (props: {
+  attributes: any;
+  children: any[];
+  leaf: { bold?: boolean };
+}) => {
   return (
     <span
       {...props.attributes}
@@ -47,20 +60,20 @@ const Leaf = (props) => {
 };
 
 const CustomEditor = {
-  isBoldMarkActive(editor) {
+  isBoldMarkActive(editor: Editor) {
     const marks = Editor.marks(editor);
     return marks ? marks.bold === true : false;
   },
 
-  isCodeBlockActive(editor) {
-    const [match] = Editor.nodes(editor, {
-      match: (n) => n.type === "code",
+  isCodeBlockActive(editor: Editor): boolean {
+    const [match] = Editor.nodes<CustomNode>(editor, {
+      match: (n) => Element.isElement(n) && n.type === "code",
     });
 
     return !!match;
   },
 
-  toggleBoldMark(editor) {
+  toggleBoldMark(editor: Editor) {
     const isActive = CustomEditor.isBoldMarkActive(editor);
     if (isActive) {
       Editor.removeMark(editor, "bold");
@@ -69,12 +82,12 @@ const CustomEditor = {
     }
   },
 
-  toggleCodeBlock(editor) {
+  toggleCodeBlock(editor: Editor) {
     debugger;
     const isActive = CustomEditor.isCodeBlockActive(editor);
-    Transforms.setNodes(
+    Transforms.setNodes<CustomNode>(
       editor,
-      { type: isActive ? null : "code" },
+      { type: isActive ? undefined : "code" },
       { match: (n) => Element.isElement(n) && Editor.isBlock(editor, n) }
     );
   },
@@ -96,18 +109,24 @@ export default function WritableCanvas() {
     ];
   }, []);
 
-  const renderElement = useCallback((props: { element: { type: any } }) => {
-    switch (props.element.type) {
-      case "code":
-        return <CodeElement {...props} />;
-      default:
-        return <DefaultElement {...props} />;
-    }
-  }, []);
+  const renderElement = useCallback(
+    (props: { element: { type: any }; attributes: any; children: any[] }) => {
+      switch (props.element.type) {
+        case "code":
+          return <CodeElement {...props} />;
+        default:
+          return <DefaultElement {...props} />;
+      }
+    },
+    []
+  );
 
-  const renderLeaf = useCallback((props) => {
-    return <Leaf {...props} />;
-  }, []);
+  const renderLeaf = useCallback(
+    (props: { attributes: any; children: any[]; leaf: { bold?: boolean } }) => {
+      return <Leaf {...props} />;
+    },
+    []
+  );
 
   return (
     <Slate
@@ -146,6 +165,14 @@ export default function WritableCanvas() {
       <Editable
         renderElement={renderElement}
         renderLeaf={renderLeaf}
+        onMouseUp={(event) => {
+          if (editor.selection) {
+            console.log(editor.selection);
+            const domRange = ReactEditor.toDOMRange(editor, editor.selection);
+            const rect = domRange.getBoundingClientRect();
+            console.log(rect);
+          }
+        }}
         onKeyDown={(event) => {
           if (!event.ctrlKey) {
             return;
