@@ -1,15 +1,14 @@
 "use client";
 
-import { JSX, useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
+import { Editor, Transforms, createEditor, Element, Node } from "slate";
 import {
-  Descendant,
-  Editor,
-  Transforms,
-  createEditor,
-  Element,
-  Node,
-} from "slate";
-import { Editable, Slate, withReact } from "slate-react";
+  Editable,
+  RenderElementProps,
+  RenderLeafProps,
+  Slate,
+  withReact,
+} from "slate-react";
 // This example is for an Editor with `ReactEditor` and `HistoryEditor`
 import { BaseEditor } from "slate";
 import { ReactEditor } from "slate-react";
@@ -32,7 +31,7 @@ declare module "slate" {
 }
 
 // Define a React component renderer for our code blocks.
-const CodeElement = (props: { attributes: any; children: any[] }) => {
+const CodeElement = (props: RenderElementProps) => {
   return (
     <pre {...props.attributes}>
       <code>Code: {props.children}</code>
@@ -40,15 +39,11 @@ const CodeElement = (props: { attributes: any; children: any[] }) => {
   );
 };
 
-const DefaultElement = (props: { attributes: any; children: any[] }) => {
+const DefaultElement = (props: RenderElementProps) => {
   return <p {...props.attributes}>Default: {props.children}</p>;
 };
 
-const Leaf = (props: {
-  attributes: any;
-  children: any[];
-  leaf: { bold?: boolean };
-}) => {
+const Leaf = (props: RenderLeafProps) => {
   return (
     <span
       {...props.attributes}
@@ -109,24 +104,18 @@ export default function WritableCanvas() {
     ];
   }, []);
 
-  const renderElement = useCallback(
-    (props: { element: { type: any }; attributes: any; children: any[] }) => {
-      switch (props.element.type) {
-        case "code":
-          return <CodeElement {...props} />;
-        default:
-          return <DefaultElement {...props} />;
-      }
-    },
-    []
-  );
+  const renderElement = useCallback((props: RenderElementProps) => {
+    switch (props.element.type) {
+      case "code":
+        return <CodeElement {...props} />;
+      default:
+        return <DefaultElement {...props} />;
+    }
+  }, []);
 
-  const renderLeaf = useCallback(
-    (props: { attributes: any; children: any[]; leaf: { bold?: boolean } }) => {
-      return <Leaf {...props} />;
-    },
-    []
-  );
+  const renderLeaf = useCallback((props: RenderLeafProps) => {
+    return <Leaf {...props} />;
+  }, []);
 
   return (
     <Slate
