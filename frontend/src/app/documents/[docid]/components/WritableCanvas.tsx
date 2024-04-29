@@ -1,4 +1,6 @@
-import { useCallback, useState } from "react";
+"use client";
+
+import { useCallback, useMemo, useState } from "react";
 import { Descendant, Editor, Transforms, createEditor, Element } from "slate";
 import { Editable, Slate, withReact } from "slate-react";
 // This example is for an Editor with `ReactEditor` and `HistoryEditor`
@@ -78,18 +80,21 @@ const CustomEditor = {
   },
 };
 
-const initialValue: Descendant[] = [
-  {
-    type: "paragraph",
-    children: [
-      {
-        text: "A line of text in a paragraph.",
-      },
-    ],
-  },
-];
 export default function WritableCanvas() {
   const [editor] = useState(() => withReact(createEditor()));
+
+  const initialValue = useMemo(() => {
+    if (typeof window !== "undefined") {
+      const content = localStorage.getItem("content");
+      if (content) return JSON.parse(content);
+    }
+    return [
+      {
+        type: "paragraph",
+        children: [{ text: "a line of text in a paragraph" }],
+      },
+    ];
+  }, []);
 
   const renderElement = useCallback((props: { element: { type: any } }) => {
     switch (props.element.type) {
@@ -105,7 +110,19 @@ export default function WritableCanvas() {
   }, []);
 
   return (
-    <Slate editor={editor} initialValue={initialValue}>
+    <Slate
+      editor={editor}
+      initialValue={initialValue}
+      onChange={(value) => {
+        const isAstChange = editor.operations.some(
+          (op) => "set_selection" !== op.type
+        );
+        if (isAstChange) {
+          const content = JSON.stringify(value);
+          localStorage.setItem("content", content);
+        }
+      }}
+    >
       <div>
         <button
           className="rounded-full bg-lime-300"
