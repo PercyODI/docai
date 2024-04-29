@@ -1,0 +1,11 @@
+{
+    "eslint.workingDirectories": [
+        "./backend",
+        "./frontend"
+    ],
+    "eslint.enable": true,
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "[typescriptreact]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    }
+}
